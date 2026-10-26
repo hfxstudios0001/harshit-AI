@@ -1,15 +1,152 @@
-import {test} from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {JSDOM} from 'jsdom';
-import {lessons,unlocked,correct} from '../src/lessons.js';
-const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8').replace("import './style.css';",'').replace("import {lessons, unlocked, correct} from './lessons.js';",'');
-function boot(saved){const dom=new JSDOM('<div id="app"></div>',{url:'http://localhost',runScripts:'outside-only'});dom.window.scrollTo=()=>{};Object.assign(dom.window,{lessons,unlocked,correct});if(saved)dom.window.localStorage.setItem('stepwise-v1',saved);dom.window.eval(source);return dom.window;}
-test('a beginner completes a lesson, unlocks the next, and retains their reflection',()=>{const w=boot(),d=w.document;assert.equal(d.querySelector('[data-lesson="1"]').disabled,true);d.querySelector('.primary[data-lesson="0"]').click();d.querySelector('[data-stage="2"]').click();assert.equal(d.querySelector('#complete').disabled,true);d.querySelector('[data-answer="0"]').click();assert.match(d.querySelector('.feedback').textContent,/Not quite/);assert.equal(d.querySelector('#complete').disabled,true);d.querySelector('[data-answer="1"]').click();const note=d.querySelector('#reflection');note.value='Print displays information; quotes mean the value is text.';note.dispatchEvent(new w.Event('input'));assert.equal(d.querySelector('#complete').disabled,false);d.querySelector('#complete').click();assert.equal(d.querySelector('[data-lesson="1"]').disabled,false);assert.equal(d.querySelector('[data-lesson="2"]').disabled,true);const restored=boot(w.localStorage.getItem('stepwise-v1'));restored.document.querySelector('[data-page="notes"]').click();assert.match(restored.document.querySelector('.saved-note').textContent,/quotes mean/);});
-test('scratchpad persists and reflections render as text rather than HTML',()=>{const w=boot(),d=w.document;d.querySelector('.primary[data-lesson="0"]').click();d.querySelector('[data-stage="1"]').click();let code=d.querySelector('#code');code.value='print("My first change")';code.dispatchEvent(new w.Event('input'));d.querySelector('[data-stage="0"]').click();d.querySelector('[data-stage="1"]').click();assert.equal(d.querySelector('#code').value,'print("My first change")');d.querySelector('[data-stage="2"]').click();const note=d.querySelector('#reflection');note.value='<img src=x onerror=alert(1)> This is text.';note.dispatchEvent(new w.Event('input'));d.querySelector('[data-page="notes"]').click();assert.equal(d.querySelector('.saved-note img'),null);assert.match(d.querySelector('.saved-note').textContent,/<img/);});
-test('every chapter can be completed and reviewed',()=>{const w=boot(),d=w.document;for(let i=0;i<lessons.length;i++){d.querySelector(`[data-lesson="${i}"]`).click();d.querySelector('[data-stage="2"]').click();d.querySelector(`[data-answer="${lessons[i].answer}"]`).click();const note=d.querySelector('#reflection');note.value='My explanation of the concept and how I would use it.';note.dispatchEvent(new w.Event('input'));d.querySelector('#complete').click();}d.querySelector('[data-page="review"]').click();assert.equal(d.querySelectorAll('.review-card').length,lessons.length);d.querySelector('[data-page="home"]').click();assert.match(d.querySelector('.stats').textContent,/100/);});
-test('invalid saved JSON does not prevent startup',()=>{const w=boot('{broken');assert.match(w.document.querySelector('h1').textContent,/Your future/);});
-test('library search finds lessons and keeps locked lessons locked',()=>{const w=boot(),d=w.document;d.querySelector('[data-page="library"]').click();const search=d.querySelector('#lesson-search');search.value='dictionary';search.dispatchEvent(new w.Event('input'));assert.equal(d.querySelectorAll('#search-results .lesson-row').length,1);assert.equal(d.querySelector('#search-results .lesson-row').disabled,true);search.value='no such topic';search.dispatchEvent(new w.Event('input'));assert.match(d.querySelector('#search-results').textContent,/No lessons found/);});
-test('backups reject unknown formats and gaps; clean text fields',()=>{const w=boot();assert.throws(()=>w.validateBackup({format:'other'}));assert.throws(()=>w.validateBackup({format:'stepwise-backup',version:1,progress:{completed:[1]}}));const p=w.validateBackup({format:'stepwise-backup',version:1,progress:{completed:[0],notes:{0:'Saved reflection',1:{bad:true}},drafts:{0:'print(1)'},goal:30}});assert.equal(p.goal,30);assert.equal(p.notes[0],'Saved reflection');assert.equal(p.notes[1],undefined);assert.equal(p.drafts[0],'print(1)');});
-test('review schedules are saved when the learner recalls a lesson',()=>{const w=boot(JSON.stringify({completed:[0],notes:{0:'Printing displays the provided value.'}})),d=w.document;d.querySelector('[data-page="review"]').click();d.querySelector('[data-review="0"]').click();const saved=JSON.parse(w.localStorage.getItem('stepwise-v1'));assert.ok(saved.reviews[0].due>Date.now());assert.equal(saved.reviews[0].level,1);});
-test('HTML practice runs in a restricted preview frame',()=>{const w=boot(JSON.stringify({completed:Array.from({length:26},(_,i)=>i)})),d=w.document;d.querySelector('[data-page="path"]').click();d.querySelector('[data-lesson="25"]').click();d.querySelector('[data-stage="1"]').click();d.querySelector('#run-code').click();const frame=d.querySelector('iframe');assert.equal(frame.getAttribute('sandbox'),'allow-scripts');assert.match(frame.srcdoc,/Content-Security-Policy/);assert.match(frame.srcdoc,/learning journal/);});
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { JSDOM } from "jsdom";
+import { lessons, unlocked, correct } from "../src/lessons.js";
+const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
+  .replace(/^import .*;\n/gm, "");
+function boot(saved) {
+  const dom = new JSDOM('<div id="app"></div>', {
+    url: "http://localhost",
+    runScripts: "outside-only",
+  });
+  dom.window.scrollTo = () => {};
+  Object.assign(dom.window, { lessons, unlocked, correct });
+  if (saved) dom.window.localStorage.setItem("stepwise-v1", saved);
+  dom.window.eval(source);
+  return dom.window;
+}
+test("a beginner completes a lesson, unlocks the next, and retains their reflection", () => {
+  const w = boot(),
+    d = w.document;
+  assert.equal(d.querySelector('[data-lesson="1"]').disabled, true);
+  d.querySelector('.primary[data-lesson="0"]').click();
+  d.querySelector('[data-stage="2"]').click();
+  assert.equal(d.querySelector("#complete").disabled, true);
+  d.querySelector('[data-answer="0"]').click();
+  assert.match(d.querySelector(".feedback").textContent, /Not quite/);
+  assert.equal(d.querySelector("#complete").disabled, true);
+  d.querySelector('[data-answer="1"]').click();
+  const note = d.querySelector("#reflection");
+  note.value = "Print displays information; quotes mean the value is text.";
+  note.dispatchEvent(new w.Event("input"));
+  assert.equal(d.querySelector("#complete").disabled, false);
+  d.querySelector("#complete").click();
+  assert.equal(d.querySelector('[data-lesson="1"]').disabled, false);
+  assert.equal(d.querySelector('[data-lesson="2"]').disabled, true);
+  const restored = boot(w.localStorage.getItem("stepwise-v1"));
+  restored.document.querySelector('[data-page="notes"]').click();
+  assert.match(
+    restored.document.querySelector(".saved-note").textContent,
+    /quotes mean/,
+  );
+});
+test("scratchpad persists and reflections render as text rather than HTML", () => {
+  const w = boot(),
+    d = w.document;
+  d.querySelector('.primary[data-lesson="0"]').click();
+  d.querySelector('[data-stage="1"]').click();
+  let code = d.querySelector("#code");
+  code.value = 'print("My first change")';
+  code.dispatchEvent(new w.Event("input"));
+  d.querySelector('[data-stage="0"]').click();
+  d.querySelector('[data-stage="1"]').click();
+  assert.equal(d.querySelector("#code").value, 'print("My first change")');
+  d.querySelector('[data-stage="2"]').click();
+  const note = d.querySelector("#reflection");
+  note.value = "<img src=x onerror=alert(1)> This is text.";
+  note.dispatchEvent(new w.Event("input"));
+  d.querySelector('[data-page="notes"]').click();
+  assert.equal(d.querySelector(".saved-note img"), null);
+  assert.match(d.querySelector(".saved-note").textContent, /<img/);
+});
+test("every chapter can be completed and reviewed", () => {
+  const w = boot(),
+    d = w.document;
+  for (let i = 0; i < lessons.length; i++) {
+    d.querySelector(`[data-lesson="${i}"]`).click();
+    d.querySelector('[data-stage="2"]').click();
+    d.querySelector(`[data-answer="${lessons[i].answer}"]`).click();
+    const note = d.querySelector("#reflection");
+    note.value = "My explanation of the concept and how I would use it.";
+    note.dispatchEvent(new w.Event("input"));
+    d.querySelector("#complete").click();
+  }
+  d.querySelector('[data-page="review"]').click();
+  assert.equal(d.querySelectorAll(".review-card").length, lessons.length);
+  d.querySelector('[data-page="home"]').click();
+  assert.match(d.querySelector(".stats").textContent, /100/);
+});
+test("invalid saved JSON does not prevent startup", () => {
+  const w = boot("{broken");
+  assert.match(w.document.querySelector("h1").textContent, /Your future/);
+});
+test("library search finds lessons and keeps locked lessons locked", () => {
+  const w = boot(),
+    d = w.document;
+  d.querySelector('[data-page="library"]').click();
+  const search = d.querySelector("#lesson-search");
+  search.value = "dictionary";
+  search.dispatchEvent(new w.Event("input"));
+  assert.equal(d.querySelectorAll("#search-results .lesson-row").length, 1);
+  assert.equal(d.querySelector("#search-results .lesson-row").disabled, true);
+  search.value = "no such topic";
+  search.dispatchEvent(new w.Event("input"));
+  assert.match(
+    d.querySelector("#search-results").textContent,
+    /No lessons found/,
+  );
+});
+test("backups reject unknown formats and gaps; clean text fields", () => {
+  const w = boot();
+  assert.throws(() => w.validateBackup({ format: "other" }));
+  assert.throws(() =>
+    w.validateBackup({
+      format: "stepwise-backup",
+      version: 1,
+      progress: { completed: [1] },
+    }),
+  );
+  const p = w.validateBackup({
+    format: "stepwise-backup",
+    version: 1,
+    progress: {
+      completed: [0],
+      notes: { 0: "Saved reflection", 1: { bad: true } },
+      drafts: { 0: "print(1)" },
+      goal: 30,
+    },
+  });
+  assert.equal(p.goal, 30);
+  assert.equal(p.notes[0], "Saved reflection");
+  assert.equal(p.notes[1], undefined);
+  assert.equal(p.drafts[0], "print(1)");
+});
+test("review schedules are saved when the learner recalls a lesson", () => {
+  const w = boot(
+      JSON.stringify({
+        completed: [0],
+        notes: { 0: "Printing displays the provided value." },
+      }),
+    ),
+    d = w.document;
+  d.querySelector('[data-page="review"]').click();
+  d.querySelector('[data-review="0"]').click();
+  const saved = JSON.parse(w.localStorage.getItem("stepwise-v1"));
+  assert.ok(saved.reviews[0].due > Date.now());
+  assert.equal(saved.reviews[0].level, 1);
+});
+test("HTML practice runs in a restricted preview frame", () => {
+  const w = boot(
+      JSON.stringify({ completed: Array.from({ length: 26 }, (_, i) => i) }),
+    ),
+    d = w.document;
+  d.querySelector('[data-page="path"]').click();
+  d.querySelector('[data-lesson="25"]').click();
+  d.querySelector('[data-stage="1"]').click();
+  d.querySelector("#run-code").click();
+  const frame = d.querySelector("iframe");
+  assert.equal(frame.getAttribute("sandbox"), "allow-scripts");
+  assert.match(frame.srcdoc, /Content-Security-Policy/);
+  assert.match(frame.srcdoc, /learning journal/);
+});

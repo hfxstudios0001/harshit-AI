@@ -1,12 +1,130 @@
-import {moreLessons, webLessons} from './more-lessons.js';
+import { moreLessons, webLessons } from "./more-lessons.js";
 export const lessons = [
-{title:'Meet your first program', category:'Your first steps', minutes:8, concept:'A program is a set of instructions', explanation:'A computer follows instructions literally. Programming means writing those instructions in a language it understands. We’ll start with Python: a language that reads a little like English.', example:'print("Hello, world!")', breakdown:'print() is a Python function that displays something. The quotation marks tell Python that Hello, world! is text. The parentheses hold the information we give to the function.', task:'Change the message to introduce yourself. Keep the quotation marks and parentheses.', starter:'print("Hello, world!")', question:'What will print("2 + 3") display?', choices:['5','2 + 3','Nothing'], answer:1, why:'Quotation marks make this text. Python displays 2 + 3 exactly as written; it does not calculate it.', recall:'Without looking above, explain what print() does and why the quotation marks matter.'},
-{title:'Give information a name',category:'Python foundations',minutes:10,concept:'Variables are names for values',explanation:'A variable lets you refer to information by a name. The = symbol assigns the value on the right to the name on the left. Choose names that explain what the information means.',example:'name = "Alex"\nprint(name)',breakdown:'The first line assigns text to name. The second line uses name without quotation marks, so Python looks up its value and displays Alex.',task:'Create a variable named topic with the value Python, then print topic.',starter:'topic = "Python"\nprint(topic)',question:'After score = 10 and then score = 12, what is score?',choices:['10','22','12'],answer:2,why:'The second assignment replaces the previous value. Assignment does not automatically add values together.',recall:'How are print("name") and print(name) different?'},
-{title:'Work with numbers',category:'Python foundations',minutes:10,concept:'Let the computer do the arithmetic',explanation:'Numbers without quotation marks can be used in calculations. Python uses + for addition, - for subtraction, * for multiplication, and / for division.',example:'minutes = 15\nprint(minutes * 4)',breakdown:'minutes stores the number 15. Multiplying it by 4 produces 60. Unlike "15", the value 15 is a number, not text.',task:'Calculate how many minutes you will study in seven days if you study 20 minutes a day.',starter:'minutes = 20\nprint(minutes * 7)',question:'What does print(3 + 4 * 2) display?',choices:['14','11','9'],answer:1,why:'Multiplication happens before addition: 4 * 2 is 8, then 3 + 8 is 11. Parentheses can change that order.',recall:'Explain why print("3 + 4") and print(3 + 4) produce different results.'},
-{title:'Make a decision',category:'Think like a programmer',minutes:12,concept:'Choose what happens with conditions',explanation:'Programs can take different paths. An if statement runs its indented instructions only when its condition is true. An else branch handles the other case.',example:'minutes = 20\nif minutes >= 15:\n    print("Goal reached!")\nelse:\n    print("Keep going!")',breakdown:'>= means greater than or equal to. The colon introduces a block. Indentation tells Python which instructions belong to that block.',task:'Predict what happens when minutes is 10, 15, and 20. Explain each result in your notes.',starter:'minutes = 10\nif minutes >= 15:\n    print("Goal reached!")\nelse:\n    print("Keep going!")',question:'When minutes is exactly 15, which message is printed?',choices:['Goal reached!','Keep going!','Both messages'],answer:0,why:'>= includes equality, so 15 >= 15 is true. Only the if branch runs.',recall:'Why does indentation matter in an if statement?'},
-{title:'Repeat without repeating yourself',category:'Think like a programmer',minutes:12,concept:'Loops repeat a block of instructions',explanation:'A for loop visits each item in a sequence. You write the repeated action once, and Python runs it for each item.',example:'for day in range(1, 4):\n    print(day)',breakdown:'range(1, 4) produces 1, 2, and 3. The stopping value, 4, is not included. Each time around, day refers to the next number.',task:'Adapt the example to print the days 1 through 7. Write down which stopping value you need.',starter:'for day in range(1, 4):\n    print(day)',question:'How many times does range(1, 5) repeat?',choices:['5','4','6'],answer:1,why:'It produces 1, 2, 3, and 4. The ending value is excluded.',recall:'What problem does a loop solve? Give an example from your everyday life.'},
-{title:'Build your study tracker',category:'Your first small project',minutes:20,concept:'Combine the pieces into something useful',explanation:'A project connects ideas. Start with a small version: store your daily study time, calculate a weekly total, and report whether you reached your target.',example:'daily_minutes = 20\nweekly_minutes = daily_minutes * 7\nprint(weekly_minutes)\nif weekly_minutes >= 140:\n    print("Weekly goal reached!")',breakdown:'You are combining variables, arithmetic, output, and a condition. Build one part at a time and check its output before adding the next part.',task:'Change daily_minutes to 10, 20, and 30. Predict each weekly total. Then explain how you would change the goal to 210 minutes.',starter:'daily_minutes = 20\nweekly_minutes = daily_minutes * 7\nprint(weekly_minutes)',question:'What should you do if the output is unexpected?',choices:['Rewrite everything','Inspect values and test one small part at a time','Add more features'],answer:1,why:'Small checks help isolate the mistake. Debugging is a normal part of programming, not a sign that you cannot do it.',recall:'Explain your tracker to someone who has never programmed. What goes in, what changes, and what comes out?'}
+  {
+    title: "Meet your first program",
+    category: "Your first steps",
+    minutes: 8,
+    concept: "A program is a set of instructions",
+    explanation:
+      "A computer follows instructions literally. Programming means writing those instructions in a language it understands. We’ll start with Python: a language that reads a little like English.",
+    example: 'print("Hello, world!")',
+    breakdown:
+      "print() is a Python function that displays something. The quotation marks tell Python that Hello, world! is text. The parentheses hold the information we give to the function.",
+    task: "Change the message to introduce yourself. Keep the quotation marks and parentheses.",
+    starter: 'print("Hello, world!")',
+    question: 'What will print("2 + 3") display?',
+    choices: ["5", "2 + 3", "Nothing"],
+    answer: 1,
+    why: "Quotation marks make this text. Python displays 2 + 3 exactly as written; it does not calculate it.",
+    recall:
+      "Without looking above, explain what print() does and why the quotation marks matter.",
+  },
+  {
+    title: "Give information a name",
+    category: "Python foundations",
+    minutes: 10,
+    concept: "Variables are names for values",
+    explanation:
+      "A variable lets you refer to information by a name. The = symbol assigns the value on the right to the name on the left. Choose names that explain what the information means.",
+    example: 'name = "Alex"\nprint(name)',
+    breakdown:
+      "The first line assigns text to name. The second line uses name without quotation marks, so Python looks up its value and displays Alex.",
+    task: "Create a variable named topic with the value Python, then print topic.",
+    starter: 'topic = "Python"\nprint(topic)',
+    question: "After score = 10 and then score = 12, what is score?",
+    choices: ["10", "22", "12"],
+    answer: 2,
+    why: "The second assignment replaces the previous value. Assignment does not automatically add values together.",
+    recall: 'How are print("name") and print(name) different?',
+  },
+  {
+    title: "Work with numbers",
+    category: "Python foundations",
+    minutes: 10,
+    concept: "Let the computer do the arithmetic",
+    explanation:
+      "Numbers without quotation marks can be used in calculations. Python uses + for addition, - for subtraction, * for multiplication, and / for division.",
+    example: "minutes = 15\nprint(minutes * 4)",
+    breakdown:
+      'minutes stores the number 15. Multiplying it by 4 produces 60. Unlike "15", the value 15 is a number, not text.',
+    task: "Calculate how many minutes you will study in seven days if you study 20 minutes a day.",
+    starter: "minutes = 20\nprint(minutes * 7)",
+    question: "What does print(3 + 4 * 2) display?",
+    choices: ["14", "11", "9"],
+    answer: 1,
+    why: "Multiplication happens before addition: 4 * 2 is 8, then 3 + 8 is 11. Parentheses can change that order.",
+    recall:
+      'Explain why print("3 + 4") and print(3 + 4) produce different results.',
+  },
+  {
+    title: "Make a decision",
+    category: "Think like a programmer",
+    minutes: 12,
+    concept: "Choose what happens with conditions",
+    explanation:
+      "Programs can take different paths. An if statement runs its indented instructions only when its condition is true. An else branch handles the other case.",
+    example:
+      'minutes = 20\nif minutes >= 15:\n    print("Goal reached!")\nelse:\n    print("Keep going!")',
+    breakdown:
+      ">= means greater than or equal to. The colon introduces a block. Indentation tells Python which instructions belong to that block.",
+    task: "Predict what happens when minutes is 10, 15, and 20. Explain each result in your notes.",
+    starter:
+      'minutes = 10\nif minutes >= 15:\n    print("Goal reached!")\nelse:\n    print("Keep going!")',
+    question: "When minutes is exactly 15, which message is printed?",
+    choices: ["Goal reached!", "Keep going!", "Both messages"],
+    answer: 0,
+    why: ">= includes equality, so 15 >= 15 is true. Only the if branch runs.",
+    recall: "Why does indentation matter in an if statement?",
+  },
+  {
+    title: "Repeat without repeating yourself",
+    category: "Think like a programmer",
+    minutes: 12,
+    concept: "Loops repeat a block of instructions",
+    explanation:
+      "A for loop visits each item in a sequence. You write the repeated action once, and Python runs it for each item.",
+    example: "for day in range(1, 4):\n    print(day)",
+    breakdown:
+      "range(1, 4) produces 1, 2, and 3. The stopping value, 4, is not included. Each time around, day refers to the next number.",
+    task: "Adapt the example to print the days 1 through 7. Write down which stopping value you need.",
+    starter: "for day in range(1, 4):\n    print(day)",
+    question: "How many times does range(1, 5) repeat?",
+    choices: ["5", "4", "6"],
+    answer: 1,
+    why: "It produces 1, 2, 3, and 4. The ending value is excluded.",
+    recall:
+      "What problem does a loop solve? Give an example from your everyday life.",
+  },
+  {
+    title: "Build your study tracker",
+    category: "Your first small project",
+    minutes: 20,
+    concept: "Combine the pieces into something useful",
+    explanation:
+      "A project connects ideas. Start with a small version: store your daily study time, calculate a weekly total, and report whether you reached your target.",
+    example:
+      'daily_minutes = 20\nweekly_minutes = daily_minutes * 7\nprint(weekly_minutes)\nif weekly_minutes >= 140:\n    print("Weekly goal reached!")',
+    breakdown:
+      "You are combining variables, arithmetic, output, and a condition. Build one part at a time and check its output before adding the next part.",
+    task: "Change daily_minutes to 10, 20, and 30. Predict each weekly total. Then explain how you would change the goal to 210 minutes.",
+    starter:
+      "daily_minutes = 20\nweekly_minutes = daily_minutes * 7\nprint(weekly_minutes)",
+    question: "What should you do if the output is unexpected?",
+    choices: [
+      "Rewrite everything",
+      "Inspect values and test one small part at a time",
+      "Add more features",
+    ],
+    answer: 1,
+    why: "Small checks help isolate the mistake. Debugging is a normal part of programming, not a sign that you cannot do it.",
+    recall:
+      "Explain your tracker to someone who has never programmed. What goes in, what changes, and what comes out?",
+  },
 ];
 lessons.push(...moreLessons, ...webLessons);
-export function unlocked(index, completed) { return index === 0 || completed.includes(index - 1); }
-export function correct(index, choice) { return lessons[index]?.answer === choice; }
+export function unlocked(index, completed) {
+  return index === 0 || completed.includes(index - 1);
+}
+export function correct(index, choice) {
+  return lessons[index]?.answer === choice;
+}
