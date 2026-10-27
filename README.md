@@ -1,50 +1,37 @@
 # Stepwise
 
-A personal learning platform for complete beginners: 32 guided lessons across Python, web basics, and Git, with hands-on practice and reflection.
+A personal engineering-learning platform with 68 authored lessons, 11 chapters, and six integrated projects. The learning loop is explanation, independent exercise, executable tests, knowledge check, reflection, and scheduled retrieval practice.
 
-## Open it as a website with Vercel
+## Capabilities
 
-1. Sign in at https://vercel.com/new.
-2. Import `hfxstudios0001/harshit-AI`. If it is missing, grant the Vercel GitHub integration access to this repository.
-3. Keep the repository root as the root directory and click **Deploy**. `vercel.json` specifies the build settings. No environment variables are required.
-4. Open the deployment URL that Vercel provides. Check the first lesson's **Run Python** button on that URL.
+- Python, JavaScript, SQL, HTML/CSS, Git, algorithms, API contracts, authorization, concurrency, retrieval evaluation, and reliability foundations.
+- Python and JavaScript workers, fresh SQLite databases, isolated HTML interaction assessments, timeouts, errors, hints, and reference solutions.
+- Project briefs, acceptance criteria, executable checks, self-review rubrics, implementation export, and engineering notes.
+- Search, bookmarks, focus sessions, activity history, skills progress, spaced review, theme preferences, responsive layouts, and keyboard navigation.
+- Versioned device storage, migration from the earlier app, downloadable backups, validated restoration, and separate account workspaces.
+- Supabase sign-in and private progress integration with database ownership policies, atomic revision checks, conflict handling, and downloadable conflicting versions.
 
-This source repository is not itself a live website. Publishing a Codex environment does not deploy this website. A successful Vercel deployment supplies the public address.
+The account service needs a configured Supabase project. It is not connected merely because the integration code exists. See [deployment instructions](docs/DEPLOYMENT.md).
 
-## Learning experience
+## Develop
 
-- 24 Python lessons: first program, variables, arithmetic, decisions, loops, data collections, functions, debugging, tests, files, JSON, classes, complexity, and small projects.
-- 8 web/Git foundation lessons: HTTP, HTML, CSS, JavaScript events, version control, collaboration, SQL concepts, and deployment.
-- Real Python execution through a locally bundled Pyodide runtime in a Web Worker; Stop control and a 30-second timeout.
-- Isolated HTML/CSS/JavaScript previews, quizzes, saved reflections, searchable curriculum, and spaced review prompts.
-- Browser-local progress and downloadable/importable JSON backups.
-- Mobile and desktop layouts.
-
-## Scope and limitations
-
-This is a working foundation curriculum, not a complete curriculum covering all technology careers. AI, cloud engineering, advanced backend work, and other specializations are not authored yet. There are no accounts, automatic cloud sync, paid APIs, or AI tutoring. Quiz correctness and reflection length unlock lessons; reflections are not automatically graded. SQL and Git lessons contain written exercises, not a live database or terminal.
-
-Python runs start fresh. Python files are temporary, `input()` is not supported, and extra third-party Python packages are not bundled. Initial runtime transfer is about 15 MB. HTML previews are sandboxed and block external resources. Browser-local learning progress can be lost when clearing site data; use the backup feature before changing devices or addresses. Review scheduling is a learning aid, not a guarantee of retention.
-
-## Local development
-
-Node.js 22.12+ is required; validated with Node 24.
+Requires Node.js 22.12+ (validated with Node 24).
 
 ```sh
 npm ci
+npm test
+npm run build
 npm run dev -- --port 5173
 ```
 
-```sh
-npm test
-npm run build
-npm run preview -- --port 4173
-```
+For a production check, run `npm run preview -- --port 4173`. Build hooks copy the installed Python and SQLite runtimes into ignored public asset directories. No third-party runtime CDN is required.
 
-`predev` and `prebuild` copy the installed Python runtime into ignored `public/python/`. The production `dist/` contains everything needed for static hosting, except optional Google Fonts (system fonts provide a fallback). No secrets or environment variables are needed.
+## Verification
 
-## Validation
+Automated tests validate authored Python/JavaScript solutions, reject empty submissions, validate SQL solutions and reject starter queries, exercise completion prerequisites, backup restoration, migration, review scheduling, and simulated cloud revision conflicts. The teaching examples also run against Python.
 
-- Nine automated tests cover sequential progression through all 32 lessons, persistence, safe note rendering, invalid storage, search, backup validation, review scheduling, restricted previews, and all 24 Python teaching examples (23 run successfully and one deliberately raises TypeError for debugging practice).
-- Chromium checks cover Python output and errors, stopping execution, search, and mobile horizontal overflow.
-- The production build passes. Public deployment must still be verified after importing the repository into Vercel.
+Production Chromium checks cover Python and SQL grading, all HTML reference assessments, lesson completion, immediate note persistence, and mobile navigation/overflow. Live Supabase authentication, database policies, cross-device behavior, and the final public Vercel deployment require external account configuration and their own acceptance tests.
+
+## Practical limits
+
+The curriculum teaches engineering foundations and applied models. It does not replace sustained work on real services, collaboration, or specialization. API/system labs model behavior rather than starting production infrastructure. Browser assessments and supplied reference solutions support learning; they are not tamper-proof certification. Reflections and project rubrics are self-reviewed. Code execution starts fresh; Python input() and extra packages are not bundled. Keep a backup before clearing browser data.

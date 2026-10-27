@@ -13,3 +13,13 @@ for (const file of [
   );
 }
 console.log("Local Python runtime ready.");
+await copyFile(
+  new URL("../src/core/assessment.js", import.meta.url),
+  new URL("../public/assessment.js", import.meta.url),
+);
+await mkdir(new URL("../public/sql/", import.meta.url), { recursive: true });
+for (const file of ["sql-wasm.js", "sql-wasm.wasm"])
+  await copyFile(
+    new URL("../node_modules/sql.js/dist/" + file, import.meta.url),
+    new URL("../public/sql/" + file, import.meta.url),
+  );

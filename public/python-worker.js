@@ -1,12 +1,14 @@
 import { loadPyodide } from "./python/pyodide.mjs";
-let runtime;
-let output = "";
-function append(text) {
+import { assessPython } from "./assessment.js";
+let runtime,
+  output = "";
+const append = (text) => {
   if (output.length < 20000)
     output += (text + "\n").slice(0, 20000 - output.length);
-}
+};
 self.onmessage = async ({ data }) => {
   try {
+    self.postMessage({ type: "status", message: "Loading Python…" });
     runtime ||= await loadPyodide({
       indexURL: new URL("./python/", self.location.href).href,
       stdout: append,
@@ -14,20 +16,23 @@ self.onmessage = async ({ data }) => {
       stdin: () => null,
     });
     output = "";
-    const globals = runtime.toPy({});
-    try {
-      await runtime.runPythonAsync(data.code, { globals });
-      self.postMessage({
-        ok: true,
-        output: output || "Program finished without printed output.",
-      });
-    } finally {
-      globals.destroy();
-    }
+    self.postMessage({ type: "status", message: "Running your program…" });
+    const result = await assessPython(
+      runtime,
+      data.code,
+      data.tests || [],
+      () => output,
+    );
+    self.postMessage({ type: "result", result });
   } catch (error) {
     self.postMessage({
-      ok: false,
-      output: output + "\n" + String(error.message || error),
+      type: "result",
+      result: {
+        ok: false,
+        error: String(error.message || error),
+        output,
+        tests: [],
+      },
     });
   }
 };

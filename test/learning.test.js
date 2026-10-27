@@ -1,152 +1,162 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { JSDOM } from "jsdom";
-import { lessons, unlocked, correct } from "../src/lessons.js";
-const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8")
-  .replace(/^import .*;\n/gm, "");
-function boot(saved) {
-  const dom = new JSDOM('<div id="app"></div>', {
-    url: "http://localhost",
-    runScripts: "outside-only",
+import { lessons } from "../src/curriculum/index.js";
+import { projects } from "../src/curriculum/projects.js";
+import {
+  initialProgress,
+  canComplete,
+  markComplete,
+  normalizeProgress,
+  exportBackup,
+  parseBackup,
+  migrateLegacy,
+  scheduleReview,
+  activitySummary,
+} from "../src/core/progress.js";
+import {
+  codeFingerprint,
+  allPassed,
+  assessPython,
+  assessJavaScript,
+  assessSql,
+} from "../src/core/assessment.js";
+import { loadPyodide } from "pyodide";
+import initSqlJs from "sql.js";
+import { SyncCoordinator } from "../src/core/sync.js";
+test("completion requires both current code evidence and correct knowledge", () => {
+  const l = lessons[0],
+    p = initialProgress();
+  assert.equal(markComplete(p, l), false);
+  p.drafts[l.id] = l.challenge.solution;
+  p.evidence[l.id] = {
+    hash: codeFingerprint(p.drafts[l.id]),
+    caseCount: l.challenge.tests.length,
+    passedAt: 1,
+  };
+  assert.equal(canComplete(p, l), false);
+  p.quiz[l.id] = l.quiz.answer;
+  assert.equal(markComplete(p, l, 100), true);
+  p.drafts[l.id] = 'print("wrong")';
+  assert.equal(canComplete(p, l), false);
+});
+test("backups preserve evidence, notes, review dates and drafts; reject arbitrary files", () => {
+  const p = initialProgress();
+  p.notes[lessons[0].id] = "<script>literal note</script>";
+  p.drafts[lessons[0].id] = "print(1)";
+  p.reviews[lessons[0].id] = { level: 2, due: 12345 };
+  assert.deepEqual(parseBackup(JSON.stringify(exportBackup(p))), p);
+  assert.throws(() => parseBackup("{}"));
+  assert.throws(() => parseBackup("bad json"));
+});
+test("legacy migration keeps notes without granting new assessment credit", () => {
+  const p = migrateLegacy({
+    completed: [0],
+    notes: { 0: "My note" },
+    drafts: { 0: "print(1)" },
   });
-  dom.window.scrollTo = () => {};
-  Object.assign(dom.window, { lessons, unlocked, correct });
-  if (saved) dom.window.localStorage.setItem("stepwise-v1", saved);
-  dom.window.eval(source);
-  return dom.window;
-}
-test("a beginner completes a lesson, unlocks the next, and retains their reflection", () => {
-  const w = boot(),
-    d = w.document;
-  assert.equal(d.querySelector('[data-lesson="1"]').disabled, true);
-  d.querySelector('.primary[data-lesson="0"]').click();
-  d.querySelector('[data-stage="2"]').click();
-  assert.equal(d.querySelector("#complete").disabled, true);
-  d.querySelector('[data-answer="0"]').click();
-  assert.match(d.querySelector(".feedback").textContent, /Not quite/);
-  assert.equal(d.querySelector("#complete").disabled, true);
-  d.querySelector('[data-answer="1"]').click();
-  const note = d.querySelector("#reflection");
-  note.value = "Print displays information; quotes mean the value is text.";
-  note.dispatchEvent(new w.Event("input"));
-  assert.equal(d.querySelector("#complete").disabled, false);
-  d.querySelector("#complete").click();
-  assert.equal(d.querySelector('[data-lesson="1"]').disabled, false);
-  assert.equal(d.querySelector('[data-lesson="2"]').disabled, true);
-  const restored = boot(w.localStorage.getItem("stepwise-v1"));
-  restored.document.querySelector('[data-page="notes"]').click();
-  assert.match(
-    restored.document.querySelector(".saved-note").textContent,
-    /quotes mean/,
-  );
+  assert.equal(p.notes["foundation-1"], "My note");
+  assert.equal(Object.keys(p.completed).length, 0);
+  assert.deepEqual(p.legacyCompleted, ["foundation-1"]);
 });
-test("scratchpad persists and reflections render as text rather than HTML", () => {
-  const w = boot(),
-    d = w.document;
-  d.querySelector('.primary[data-lesson="0"]').click();
-  d.querySelector('[data-stage="1"]').click();
-  let code = d.querySelector("#code");
-  code.value = 'print("My first change")';
-  code.dispatchEvent(new w.Event("input"));
-  d.querySelector('[data-stage="0"]').click();
-  d.querySelector('[data-stage="1"]').click();
-  assert.equal(d.querySelector("#code").value, 'print("My first change")');
-  d.querySelector('[data-stage="2"]').click();
-  const note = d.querySelector("#reflection");
-  note.value = "<img src=x onerror=alert(1)> This is text.";
-  note.dispatchEvent(new w.Event("input"));
-  d.querySelector('[data-page="notes"]').click();
-  assert.equal(d.querySelector(".saved-note img"), null);
-  assert.match(d.querySelector(".saved-note").textContent, /<img/);
+test("review and focus statistics use real events", () => {
+  const p = initialProgress(),
+    id = lessons[0].id;
+  p.completed[id] = 100;
+  scheduleReview(p, id, "again", 1000);
+  assert.equal(p.reviews[id].due, 601000);
+  assert.equal(activitySummary(p, 1001).focusMinutes, 0);
 });
-test("every chapter can be completed and reviewed", () => {
-  const w = boot(),
-    d = w.document;
-  for (let i = 0; i < lessons.length; i++) {
-    d.querySelector(`[data-lesson="${i}"]`).click();
-    d.querySelector('[data-stage="2"]').click();
-    d.querySelector(`[data-answer="${lessons[i].answer}"]`).click();
-    const note = d.querySelector("#reflection");
-    note.value = "My explanation of the concept and how I would use it.";
-    note.dispatchEvent(new w.Event("input"));
-    d.querySelector("#complete").click();
+test("unknown imported IDs cannot inflate completion", () => {
+  const p = normalizeProgress({
+    completed: { fake: 123 },
+    bookmarks: ["fake"],
+  });
+  assert.equal(Object.keys(p.completed).length, 0);
+  assert.equal(p.bookmarks.length, 0);
+});
+test("all authored Python and JavaScript solutions pass and empty submissions fail", async () => {
+  let output = "";
+  const runtime = await loadPyodide({ stdout: (t) => (output += t + "\n") });
+  for (const item of [...lessons, ...projects]) {
+    const c = item.challenge;
+    if (!["python", "javascript"].includes(c.language)) continue;
+    output = "";
+    const good =
+      c.language === "python"
+        ? await assessPython(runtime, c.solution, c.tests, () => output)
+        : await assessJavaScript(c.solution, c.tests);
+    assert.equal(
+      allPassed(good, c.tests.length),
+      true,
+      item.title + ": " + JSON.stringify(good),
+    );
+    output = "";
+    const bad =
+      c.language === "python"
+        ? await assessPython(runtime, "", c.tests, () => output)
+        : await assessJavaScript("", c.tests);
+    assert.equal(
+      allPassed(bad, c.tests.length),
+      false,
+      item.title + " accepted empty code",
+    );
   }
-  d.querySelector('[data-page="review"]').click();
-  assert.equal(d.querySelectorAll(".review-card").length, lessons.length);
-  d.querySelector('[data-page="home"]').click();
-  assert.match(d.querySelector(".stats").textContent, /100/);
 });
-test("invalid saved JSON does not prevent startup", () => {
-  const w = boot("{broken");
-  assert.match(w.document.querySelector("h1").textContent, /Your future/);
+test("all SQL solutions pass and starter queries fail", async () => {
+  const SQL = await initSqlJs();
+  for (const item of [...lessons, ...projects].filter(
+    (i) => i.challenge.language === "sql",
+  )) {
+    const c = item.challenge;
+    assert.equal(
+      allPassed(assessSql(SQL, c.solution, c), c.tests.length),
+      true,
+      item.title,
+    );
+    assert.equal(
+      allPassed(assessSql(SQL, c.starter, c), c.tests.length),
+      false,
+      item.title + " starter already passes",
+    );
+  }
 });
-test("library search finds lessons and keeps locked lessons locked", () => {
-  const w = boot(),
-    d = w.document;
-  d.querySelector('[data-page="library"]').click();
-  const search = d.querySelector("#lesson-search");
-  search.value = "dictionary";
-  search.dispatchEvent(new w.Event("input"));
-  assert.equal(d.querySelectorAll("#search-results .lesson-row").length, 1);
-  assert.equal(d.querySelector("#search-results .lesson-row").disabled, true);
-  search.value = "no such topic";
-  search.dispatchEvent(new w.Event("input"));
-  assert.match(
-    d.querySelector("#search-results").textContent,
-    /No lessons found/,
-  );
-});
-test("backups reject unknown formats and gaps; clean text fields", () => {
-  const w = boot();
-  assert.throws(() => w.validateBackup({ format: "other" }));
-  assert.throws(() =>
-    w.validateBackup({
-      format: "stepwise-backup",
-      version: 1,
-      progress: { completed: [1] },
-    }),
-  );
-  const p = w.validateBackup({
-    format: "stepwise-backup",
-    version: 1,
-    progress: {
-      completed: [0],
-      notes: { 0: "Saved reflection", 1: { bad: true } },
-      drafts: { 0: "print(1)" },
-      goal: 30,
-    },
+test("sync refuses to overwrite a differing device copy on initial load", async () => {
+  let state = { updatedAt: 2, notes: { a: "local" } };
+  const remote = {
+    revision: 4,
+    progress: { updatedAt: 3, notes: { a: "remote" } },
+  };
+  const sync = new SyncCoordinator({
+    service: { load: async () => remote },
+    getState: () => state,
+    setState: (p) => (state = p),
   });
-  assert.equal(p.goal, 30);
-  assert.equal(p.notes[0], "Saved reflection");
-  assert.equal(p.notes[1], undefined);
-  assert.equal(p.drafts[0], "print(1)");
+  await sync.load();
+  assert.ok(sync.conflict);
+  assert.equal(state.notes.a, "local");
+  await sync.resolve("cloud");
+  assert.equal(state.notes.a, "remote");
+  sync.dispose();
 });
-test("review schedules are saved when the learner recalls a lesson", () => {
-  const w = boot(
-      JSON.stringify({
-        completed: [0],
-        notes: { 0: "Printing displays the provided value." },
+test("stale saves surface a conflict and preserve the current device state", async () => {
+  let state = { updatedAt: 1, value: "local" };
+  const sync = new SyncCoordinator({
+    service: {
+      load: async () => ({
+        revision: 2,
+        progress: { updatedAt: 2, value: "remote" },
       }),
-    ),
-    d = w.document;
-  d.querySelector('[data-page="review"]').click();
-  d.querySelector('[data-review="0"]').click();
-  const saved = JSON.parse(w.localStorage.getItem("stepwise-v1"));
-  assert.ok(saved.reviews[0].due > Date.now());
-  assert.equal(saved.reviews[0].level, 1);
-});
-test("HTML practice runs in a restricted preview frame", () => {
-  const w = boot(
-      JSON.stringify({ completed: Array.from({ length: 26 }, (_, i) => i) }),
-    ),
-    d = w.document;
-  d.querySelector('[data-page="path"]').click();
-  d.querySelector('[data-lesson="25"]').click();
-  d.querySelector('[data-stage="1"]').click();
-  d.querySelector("#run-code").click();
-  const frame = d.querySelector("iframe");
-  assert.equal(frame.getAttribute("sandbox"), "allow-scripts");
-  assert.match(frame.srcdoc, /Content-Security-Policy/);
-  assert.match(frame.srcdoc, /learning journal/);
+      save: async () => {
+        throw Object.assign(new Error("stale"), { code: "conflict" });
+      },
+    },
+    getState: () => state,
+    setState: (p) => (state = p),
+  });
+  sync.ready = true;
+  sync.revision = 1;
+  await sync.flush();
+  assert.equal(state.value, "local");
+  assert.equal(sync.conflict.remote.progress.value, "remote");
+  sync.dispose();
 });
